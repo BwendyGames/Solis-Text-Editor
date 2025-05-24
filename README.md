@@ -15,7 +15,7 @@ A simple, lightweight text editor, built for myself but free for anyone to use.
 
 ## How to Use
 
-1. **Unzip** this folder.
+1. **Unzip** the latest release folder.
 2. **Run** the `.exe`
 3. **Add new themes** by dropping `.json` files into the `themes` folder.
 4. **Your settings are saved automatically** .
