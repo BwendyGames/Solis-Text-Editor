@@ -9,8 +9,7 @@ A simple, lightweight text editor, built for myself but free for anyone to use.
 ---
 
 - ✨ **Beautiful built-in [Catppuccin](https://catppuccin.com/) themes**
-- 🎨 **Make your own themes in easy-to-edit JSON**
-- ⚡ **Fast, portable, and no install required**
+- 🎨 **Make your own themes in JSON**
 
 ---
 
@@ -19,7 +18,7 @@ A simple, lightweight text editor, built for myself but free for anyone to use.
 1. **Unzip** this folder.
 2. **Run** `text_editor.exe`
 3. **Add new themes** by dropping `.json` files into the `themes` folder.
-4. **Your settings are saved automatically** (no cloud, no tracking).
+4. **Your settings are saved automatically** .
 
 ---
 
@@ -40,4 +39,4 @@ A simple, lightweight text editor, built for myself but free for anyone to use.
 
 ## License
 
-Personal project, but feel free to use or adapt!
+Personal project, but feel free to use or adapt! 
