@@ -2,4 +2,4 @@
 
 A simple, lightweight, text editor, I'm making for myself.
 
-Built in support for all [Catppuccin](https://catppuccin.com/) themes! 
+Built in support for all [Catppuccin](https://catppuccin.com/) themes, and you can make your own themes in JSON!
