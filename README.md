@@ -36,7 +36,3 @@ A simple, lightweight text editor, built for myself but free for anyone to use.
 - Built with [Python](https://python.org) and [Tkinter](https://docs.python.org/3/library/tkinter.html)
 
 ---
-
-## License
-
-Personal project, but feel free to use or adapt! 
