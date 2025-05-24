@@ -1,5 +1,43 @@
-![screenshot](https://github.com/user-attachments/assets/eed7e9cb-d248-4973-9fa2-eb6e4886aaff)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/eed7e9cb-d248-4973-9fa2-eb6e4886aaff" width="600" alt="Solis Text Editor screenshot">
+</p>
 
-A simple, lightweight, text editor, I'm making for myself.
+# Solis Text Editor
 
-Built in support for all [Catppuccin](https://catppuccin.com/) themes, and you can make your own themes in JSON!
+A simple, lightweight text editor, built for myself but free for anyone to use.
+
+---
+
+- ✨ **Beautiful built-in [Catppuccin](https://catppuccin.com/) themes**
+- 🎨 **Make your own themes in easy-to-edit JSON**
+- ⚡ **Fast, portable, and no install required**
+
+---
+
+## How to Use
+
+1. **Unzip** this folder.
+2. **Run** `text_editor.exe`
+3. **Add new themes** by dropping `.json` files into the `themes` folder.
+4. **Your settings are saved automatically** (no cloud, no tracking).
+
+---
+
+## Screenshot
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/eed7e9cb-d248-4973-9fa2-eb6e4886aaff" width="600" alt="Solis Text Editor screenshot">
+</p>
+
+---
+
+## Credits
+
+- Catppuccin palettes © [Catppuccin](https://catppuccin.com/)
+- Built with [Python](https://python.org) and [Tkinter](https://docs.python.org/3/library/tkinter.html)
+
+---
+
+## License
+
+Personal project, but feel free to use or adapt!
