@@ -4,7 +4,7 @@
 
 # Solis Text Editor
 
-A simple, lightweight text editor, built for myself but free for anyone to use.
+A simple, lightweight text editor for Windows, built for myself but free for anyone to use.
 
 ---
 
