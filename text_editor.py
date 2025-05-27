@@ -188,9 +188,14 @@ def apply_theme(theme_name):
             insertbackground=theme["CURSOR_COLOR"],
             selectbackground=theme["SELECT_BG"],
             selectforeground=theme["FG_COLOR"],
+            inactiveselectbackground=theme["SELECT_BG"],
             xscrollcommand=hscroll.set,
             yscrollcommand=lambda *args: (line_numbers.yview_moveto(text.yview()[0]), vscroll.set(*args))
         )
+        # Update selection colors for all tags
+        for tag in text.tag_names():
+            text.tag_configure(tag, selectbackground=theme["SELECT_BG"],
+                             selectforeground=theme["FG_COLOR"])
     explorer_frame.config(bg=theme["TREE_BG"])
     collapse_btn.config(bg=theme["TREE_BG"], fg=theme["TREE_FG"], activebackground=theme["TREE_SEL_BG"])
     expand_frame.config(bg=theme["TREE_BG"])
@@ -326,24 +331,73 @@ def setup_main_frame_contents():
 
     text = tk.Text(
         text_frame, borderwidth=0, highlightthickness=0, relief='flat', insertwidth=2,
-        undo=True, wrap="none", font=code_font
+        undo=True, wrap="none", font=code_font,
+        # Enable all standard bindings and selections
+        exportselection=False,  # Prevent selection from being cleared when losing focus
+        selectbackground=current_theme["SELECT_BG"],
+        selectforeground=current_theme["FG_COLOR"],
+        inactiveselectbackground=current_theme["SELECT_BG"]
     )
     text.pack(side="left", fill="both", expand=1, padx=0, pady=0)
+
+    # Remove any existing tags that might interfere with selection
+    for tag in text.tag_names():
+        text.tag_configure(tag, selectbackground=current_theme["SELECT_BG"],
+                         selectforeground=current_theme["FG_COLOR"])
+
+    # Prevent focus events from clearing selection
+    def keep_selection(event):
+        return "break"
+    
+    text.bind("<FocusOut>", keep_selection)
+    text.bind("<FocusIn>", keep_selection)
+
+    # Standard selection bindings that work with arrow keys
+    text.event_add('<<SelectAll>>', '<Control-a>')
+    text.event_add('<<SelectPrevWord>>', '<Shift-Control-Left>')
+    text.event_add('<<SelectNextWord>>', '<Shift-Control-Right>')
+    text.event_add('<<SelectLineStart>>', '<Shift-Home>')
+    text.event_add('<<SelectLineEnd>>', '<Shift-End>')
+    text.event_add('<<SelectUp>>', '<Shift-Up>')
+    text.event_add('<<SelectDown>>', '<Shift-Down>')
+    text.event_add('<<SelectLeft>>', '<Shift-Left>')
+    text.event_add('<<SelectRight>>', '<Shift-Right>')
+
+    # Bind virtual events to do nothing, letting Tkinter handle them
+    text.bind('<<SelectLeft>>', lambda e: None)
+    text.bind('<<SelectRight>>', lambda e: None)
+    text.bind('<<SelectUp>>', lambda e: None)
+    text.bind('<<SelectDown>>', lambda e: None)
+    text.bind('<<SelectPrevWord>>', lambda e: None)
+    text.bind('<<SelectNextWord>>', lambda e: None)
+    text.bind('<<SelectLineStart>>', lambda e: None)
+    text.bind('<<SelectLineEnd>>', lambda e: None)
+    text.bind('<<SelectAll>>', lambda e: "break")  # Special case to prevent double selection
+
+    # Bind all shift+arrow key combinations for selection
+    text.bind("<Shift-Left>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Right>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Up>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Down>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Control-Left>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Control-Right>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Control-Up>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Control-Down>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-Home>", lambda e: None)  # Let Tkinter handle it
+    text.bind("<Shift-End>", lambda e: None)  # Let Tkinter handle it
 
     vscroll = ttk.Scrollbar(text_frame, orient="vertical", command=text.yview, style='Vertical.TScrollbar')
     vscroll.pack(side="right", fill="y")
     hscroll = ttk.Scrollbar(root, orient="horizontal", command=text.xview, style='Horizontal.TScrollbar')
     hscroll.pack(side="bottom", fill="x")
-    text.config(yscrollcommand=lambda *args: (line_numbers.yview_moveto(text.yview()[0]), vscroll.set(*args)),
+    text.config(yscrollcommand=lambda *args: (line_numbers.yview_moveto(text.yview()[0]), vscroll.set),
                 xscrollcommand=hscroll.set)
 
-    for widget in (root, text, line_numbers, vscroll, hscroll):
-        widget.bind("<FocusIn>", always_focus_code)
-    for seq in ("<ButtonRelease-1>", "<Button-1>", "<KeyRelease>", "<Key>", "<Configure>"):
-        text.bind(seq, always_focus_code)
+    # Don't bind <FocusIn> or <Key> to always_focus_code. Tkinter selection will now "just work".
 
+    # Prevent line number text widget from taking focus:
     for seq in ("<Button-1>", "<B1-Motion>", "<MouseWheel>", "<Key>", "<Button-4>", "<Button-5>", "<Shift-MouseWheel>"):
-        line_numbers.bind(seq, ignore_event)
+        line_numbers.bind(seq, lambda e: "break")
 
     text.bind("<KeyRelease>", lambda e: (highlight_all(), update_line_numbers()))
     text.bind("<MouseWheel>", lambda e: update_line_numbers())
@@ -380,12 +434,6 @@ def expand_sidebar():
         sidebar_collapsed[0] = False
         update_expand_frame_height()
 
-def always_focus_code(event=None):
-    text.focus_set()
-def ignore_event(event):
-    text.focus_set()
-    return "break"
-
 def update_line_numbers(event=None):
     code = text.get("1.0", tk.END)
     lines = code.count('\n')
@@ -396,45 +444,204 @@ def update_line_numbers(event=None):
     line_numbers.config(state="disabled")
     line_numbers.yview_moveto(text.yview()[0])
 
+def indent_line(line_num):
+    """Helper function to indent a single line"""
+    line_start = f"{line_num}.0"
+    line_end = f"{line_num}.end"
+    # Get current line text to check existing indentation
+    line_text = text.get(line_start, line_end)
+    # Calculate current indentation level
+    current_indent = len(line_text) - len(line_text.lstrip())
+    # Insert indentation at the start of the line
+    text.insert(f"{line_num}.{current_indent}", "    ")
+    return 4  # Return number of spaces added
+
+def unindent_line(line_num):
+    """Helper function to unindent a single line"""
+    line_start = f"{line_num}.0"
+    line_text = text.get(line_start, f"{line_num}.end")
+    if line_text.startswith("    "):  # Exactly 4 spaces
+        text.delete(line_start, f"{line_num}.4")
+        return 4
+    elif line_text.startswith("\t"):  # Tab character
+        text.delete(line_start, f"{line_num}.1")
+        return 1
+    elif line_text.startswith(" "):  # Less than 4 spaces
+        # Count leading spaces
+        spaces = 0
+        for char in line_text:
+            if char == " ":
+                spaces += 1
+            else:
+                break
+        if spaces > 0:
+            text.delete(line_start, f"{line_num}.{spaces}")
+            return spaces
+    return 0
+
+def deindent_line(line_num):
+    """Helper function to deindent a single line"""
+    line_start = f"{line_num}.0"
+    line_end = f"{line_num}.end"
+    line_text = text.get(line_start, line_end)
+    
+    # Calculate current indentation level
+    current_indent = len(line_text) - len(line_text.lstrip())
+    
+    if current_indent >= 4:
+        # Remove up to 4 spaces from the beginning
+        text.delete(f"{line_num}.0", f"{line_num}.4")
+        return -4
+    elif current_indent > 0:
+        # Remove all existing indentation
+        text.delete(f"{line_num}.0", f"{line_num}.{current_indent}")
+        return -current_indent
+    return 0
+
 def on_tab(event):
     try:
+        # Get selection bounds
         sel_start = text.index("sel.first")
         sel_end = text.index("sel.last")
+        
+        # Parse line and column numbers
         start_line = int(sel_start.split('.')[0])
         end_line = int(sel_end.split('.')[0])
-        if text.compare(f"{end_line}.0", "==", sel_end):
-            end_line -= 1
-        for line in range(start_line, end_line + 1):
-            line_start = f"{line}.0"
-            text.insert(line_start, "    ")
-        text.focus_set()
-        return "break"
+        start_col = int(sel_start.split('.')[1])
+        end_col = int(sel_end.split('.')[1])
+        
+        # Store original cursor position
+        cursor_pos = text.index(tk.INSERT)
+        
+        # Check if selection ends at the start of a line
+        selection_ends_at_line_start = end_col == 0
+        if selection_ends_at_line_start and start_line != end_line:
+            # Include the line in indentation but keep selection at start of next line
+            actual_end_line = end_line - 1
+            keep_end_line = end_line
+        else:
+            actual_end_line = end_line
+            keep_end_line = end_line
+        
+        # Store original selection info
+        had_full_line_selection = sel_start.endswith('.0') and (selection_ends_at_line_start or text.get(f"{actual_end_line}.0", sel_end).strip() == "")
+        
+        # For each line, store its current indentation level
+        line_indents = {}
+        for line in range(start_line, actual_end_line + 1):
+            line_text = text.get(f"{line}.0", f"{line}.end")
+            line_indents[line] = len(line_text) - len(line_text.lstrip())
+        
+        # Indent each line and track the total spaces added
+        for line in range(start_line, actual_end_line + 1):
+            spaces_added = indent_line(line)
+            line_indents[line] += spaces_added
+        
+        # Adjust selection based on whether we had full lines or partial selection
+        if had_full_line_selection:
+            # If we had full lines selected, maintain full line selection including the last line
+            new_sel_start = f"{start_line}.0"
+            new_sel_end = f"{keep_end_line}.0"
+        else:
+            # Adjust selection bounds based on indentation changes
+            new_start_col = start_col + (line_indents[start_line] - (len(text.get(f"{start_line}.0", sel_start)) - len(text.get(f"{start_line}.0", sel_start).lstrip())))
+            if selection_ends_at_line_start:
+                new_sel_end = f"{keep_end_line}.0"
+            else:
+                new_end_col = end_col + (line_indents[actual_end_line] - (len(text.get(f"{actual_end_line}.0", sel_end)) - len(text.get(f"{actual_end_line}.0", sel_end).lstrip())))
+                new_sel_end = f"{actual_end_line}.{new_end_col}"
+            new_sel_start = f"{start_line}.{new_start_col}"
+        
+        # Restore selection
+        text.tag_remove("sel", "1.0", "end")
+        text.tag_add("sel", new_sel_start, new_sel_end)
+        text.mark_set(tk.INSERT, new_sel_end)
+        
     except tk.TclError:
-        text.insert(tk.INSERT, "    ")
-        text.focus_set()
-        return "break"
+        # No selection, just indent current line
+        line = text.index(tk.INSERT).split('.')[0]
+        col = int(text.index(tk.INSERT).split('.')[1])
+        # Get current line's indentation
+        line_text = text.get(f"{line}.0", f"{line}.end")
+        current_indent = len(line_text) - len(line_text.lstrip())
+        # Indent the line and move cursor
+        indent_line(line)
+        # Move cursor over by 4 spaces while preserving its position relative to the text
+        new_col = col + 4 if col >= current_indent else col
+        text.mark_set(tk.INSERT, f"{line}.{new_col}")
+    
+    return "break"
 
 def on_shift_tab(event):
     try:
+        # Get selection bounds
         sel_start = text.index("sel.first")
         sel_end = text.index("sel.last")
+        
+        # Parse line and column numbers
         start_line = int(sel_start.split('.')[0])
         end_line = int(sel_end.split('.')[0])
-        if text.compare(f"{end_line}.0", "==", sel_end):
-            end_line -= 1
-        for line in range(start_line, end_line + 1):
-            line_start = f"{line}.0"
-            line_end = f"{line}.end"
-            line_text = text.get(line_start, line_end)
-            if line_text.startswith("    "):
-                text.delete(line_start, f"{line_start}+4c")
-            elif line_text.startswith("\t"):
-                text.delete(line_start, f"{line_start}+1c")
-        text.focus_set()
-        return "break"
+        start_col = int(sel_start.split('.')[1])
+        end_col = int(sel_end.split('.')[1])
+        
+        # Check if selection ends at the start of a line
+        selection_ends_at_line_start = end_col == 0
+        if selection_ends_at_line_start and start_line != end_line:
+            # Include the line in indentation but keep selection at start of next line
+            actual_end_line = end_line - 1
+            keep_end_line = end_line
+        else:
+            actual_end_line = end_line
+            keep_end_line = end_line
+            
+        # Store original selection info
+        had_full_line_selection = sel_start.endswith('.0') and (selection_ends_at_line_start or text.get(f"{actual_end_line}.0", sel_end).strip() == "")
+        
+        # For each line, store its current indentation level
+        line_indents = {}
+        for line in range(start_line, actual_end_line + 1):
+            line_text = text.get(f"{line}.0", f"{line}.end")
+            line_indents[line] = len(line_text) - len(line_text.lstrip())
+            
+        # Deindent each line and track the spaces removed
+        for line in range(start_line, actual_end_line + 1):
+            spaces_removed = deindent_line(line)
+            line_indents[line] += spaces_removed
+            
+        # Adjust selection based on whether we had full lines or partial selection
+        if had_full_line_selection:
+            # If we had full lines selected, maintain full line selection
+            new_sel_start = f"{start_line}.0"
+            new_sel_end = f"{keep_end_line}.0"
+        else:
+            # Adjust selection bounds based on indentation changes
+            new_start_col = max(0, start_col + (line_indents[start_line] - (len(text.get(f"{start_line}.0", sel_start)) - len(text.get(f"{start_line}.0", sel_start).lstrip()))))
+            if selection_ends_at_line_start:
+                new_sel_end = f"{keep_end_line}.0"
+            else:
+                new_end_col = max(0, end_col + (line_indents[actual_end_line] - (len(text.get(f"{actual_end_line}.0", sel_end)) - len(text.get(f"{actual_end_line}.0", sel_end).lstrip()))))
+                new_sel_end = f"{actual_end_line}.{new_end_col}"
+            new_sel_start = f"{start_line}.{new_start_col}"
+            
+        # Restore selection
+        text.tag_remove("sel", "1.0", "end")
+        text.tag_add("sel", new_sel_start, new_sel_end)
+        text.mark_set(tk.INSERT, new_sel_end)
+        
     except tk.TclError:
-        text.focus_set()
-        return "break"
+        # No selection, just deindent current line
+        line = text.index(tk.INSERT).split('.')[0]
+        col = int(text.index(tk.INSERT).split('.')[1])
+        # Get current line's indentation
+        line_text = text.get(f"{line}.0", f"{line}.end")
+        current_indent = len(line_text) - len(line_text.lstrip())
+        # Deindent the line
+        spaces_removed = deindent_line(line)
+        # Move cursor while preserving its position relative to the text
+        new_col = max(0, col + spaces_removed if col >= current_indent else col)
+        text.mark_set(tk.INSERT, f"{line}.{new_col}")
+        
+    return "break"
 
 def is_auto_indent_language():
     return current_language in ("python", "gdscript", "javascript")
@@ -455,7 +662,6 @@ def auto_indent(event):
         if prev_line.rstrip().endswith(":"):
             extra_indent = "    "
     text.insert(tk.INSERT, "\n" + indent + extra_indent)
-    text.focus_set()
     return "break"
 
 def html_auto_close_tag(event):
@@ -629,8 +835,19 @@ def on_exit():
         root.destroy()
 
 def highlight_all(event=None):
+    # Save current selection if any
+    try:
+        sel_start = text.index("sel.first")
+        sel_end = text.index("sel.last")
+        has_selection = True
+    except tk.TclError:
+        has_selection = False
+
+    # Remove syntax highlighting tags but keep selection
     for tag in text.tag_names():
-        text.tag_remove(tag, "1.0", tk.END)
+        if tag != "sel":
+            text.tag_remove(tag, "1.0", "end")
+
     code = text.get("1.0", tk.END)
     index = "1.0"
 
@@ -702,6 +919,22 @@ def highlight_all(event=None):
         for match in re.finditer(r'\b[A-Z_]{2,}\b', code):
             text.tag_add("gdscript.constant", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
     elif current_language == "html":
+        for match in re.finditer(r"<!--.*?-->", code, re.DOTALL):
+            start = "1.0 + {}c".format(match.start())
+            end = "1.0 + {}c".format(match.end())
+            text.tag_add("html.comment", start, end)
+        for match in re.finditer(r"</?([a-zA-Z0-9\-]+)", code):
+            start = "1.0 + {}c".format(match.start())
+            end = "1.0 + {}c".format(match.end())
+            text.tag_add("html.tag", start, end)
+        for match in re.finditer(r"\s([a-zA-Z\-:]+)=", code):
+            start = "1.0 + {}c".format(match.start(1))
+            end = "1.0 + {}c".format(match.end(1))
+            text.tag_add("html.attr", start, end)
+        for match in re.finditer(r"=['\"](.*?)['\"]", code):
+            start = "1.0 + {}c".format(match.start())
+            end = "1.0 + {}c".format(match.end())
+            text.tag_add("html.value", start, end)
         for match in re.finditer(r"<!--.*?-->", code, re.DOTALL):
             start = "1.0 + {}c".format(match.start())
             end = "1.0 + {}c".format(match.end())
