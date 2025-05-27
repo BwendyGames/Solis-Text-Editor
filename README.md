@@ -25,9 +25,89 @@ A simple, lightweight text editor for Windows, built for myself but free for any
 ## Screenshot
 
 <p align="center">
-[site_index html](https://github.com/user-attachments/assets/72e68ef5-827a-4dd2-a9a9-2d0fbf0983a2)
-[Gladiator_Scripts_enemy gd](https://github.com/user-attachments/assets/7177be87-74bf-4929-99a2-d4cc30793791)
-[org_solis-site_index html](https://github.com/user-attachments/assets/3350c05a-bdb8-4467-a3c5-f8823af41e58)
+<!-- Screenshots Gallery for README (self-contained, no dependencies) -->
+<div style="
+  max-width: 950px;
+  margin: 32px auto;
+  padding: 24px 12px;
+  background: #1e1e2e;
+  border-radius: 16px;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  color: #cdd6f4;
+  box-shadow: 0 8px 32px #0006;
+">
+  <h2 style="
+    text-align: center;
+    color: #b4befe;
+    margin-top: 0;
+    margin-bottom: 28px;
+    letter-spacing: 1px;
+    font-size: 2rem;
+  ">
+    📸 Screenshots
+  </h2>
+  <div style="
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    justify-content: center;
+  ">
+    <!-- Screenshot 1 -->
+    <div style="
+      background: #313244;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px #0003;
+      overflow: hidden;
+      width: 300px;
+      max-width: 95vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.18s;
+    ">
+      <img src="https://github.com/user-attachments/assets/72e68ef5-827a-4dd2-a9a9-2d0fbf0983a2"
+           alt="Screenshot 1"
+           style="width: 100%; display: block; border-bottom: 1px solid #585b70;">
+      <div style="padding: 12px 12px 10px; font-size: 1.05em;">site_index.html</div>
+    </div>
+    <!-- Screenshot 2 -->
+    <div style="
+      background: #313244;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px #0003;
+      overflow: hidden;
+      width: 300px;
+      max-width: 95vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.18s;
+    ">
+      <img src="https://github.com/user-attachments/assets/7177be87-74bf-4929-99a2-d4cc30793791"
+           alt="Screenshot 2"
+           style="width: 100%; display: block; border-bottom: 1px solid #585b70;">
+      <div style="padding: 12px 12px 10px; font-size: 1.05em;">Gladiator_Scripts_enemy.gd</div>
+    </div>
+    <!-- Screenshot 3 -->
+    <div style="
+      background: #313244;
+      border-radius: 14px;
+      box-shadow: 0 2px 10px #0003;
+      overflow: hidden;
+      width: 300px;
+      max-width: 95vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform 0.18s;
+    ">
+      <img src="https://github.com/user-attachments/assets/3350c05a-bdb8-4467-a3c5-f8823af41e58"
+           alt="Screenshot 3"
+           style="width: 100%; display: block; border-bottom: 1px solid #585b70;">
+      <div style="padding: 12px 12px 10px; font-size: 1.05em;">org_solis-site_index.html</div>
+    </div>
+  </div>
+</div>
   
 </p>
 
