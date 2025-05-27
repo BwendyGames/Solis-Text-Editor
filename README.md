@@ -25,7 +25,10 @@ A simple, lightweight text editor for Windows, built for myself but free for any
 ## Screenshot
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/eed7e9cb-d248-4973-9fa2-eb6e4886aaff" width="600" alt="Solis Text Editor screenshot">
+![C__Users_bwend_OneDrive_Documents_GitHub_solislang org_solis-site_index html - Code Editor 5_26_2025 9_36_57 PM](https://github.com/user-attachments/assets/72e68ef5-827a-4dd2-a9a9-2d0fbf0983a2)
+![C__Users_bwend_OneDrive_Documents_GitHub_Gladiator_Scripts_enemy gd - Code Editor 5_26_2025 9_38_47 PM](https://github.com/user-attachments/assets/7177be87-74bf-4929-99a2-d4cc30793791)
+![C__Users_bwend_OneDrive_Documents_GitHub_solislang org_solis-site_index html - Code Editor 5_26_2025 9_37_17 PM](https://github.com/user-attachments/assets/3350c05a-bdb8-4467-a3c5-f8823af41e58)
+  
 </p>
 
 ---
