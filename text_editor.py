@@ -59,7 +59,7 @@ if not os.path.exists(icon_path):
         print("Could not download icon:", e)
 
 root = TkinterDnD.Tk()
-root.title("Untitled - Code Editor")
+root.title("Untitled - Solis Text Editor")
 root.geometry("1100x770")
 root.minsize(740, 500)
 
@@ -202,6 +202,13 @@ def apply_theme(theme_name):
     expand_btn.config(bg=theme["TREE_BG"], fg=theme["TREE_FG"], activebackground=theme["TREE_SEL_BG"])
     open_btn.config(bg=theme["TREE_BG"], fg=theme["TREE_FG"], activebackground=theme["TREE_SEL_BG"], bd=0, relief="flat")
     filetree.config(style="Custom.Treeview")
+    search_entry.config(
+        bg=theme["TREE_BG"],
+        fg=theme["TREE_FG"],
+        insertbackground=theme["CURSOR_COLOR"],
+        highlightbackground=theme["TREE_SEL_BG"],
+        font=("Consolas", 11)
+    )
     menubar.config(bg=theme["MENU_BG"], fg=theme["MENU_FG"])
     filemenu.config(bg=theme["MENU_BG"], fg=theme["MENU_FG"])
     thememenu.config(bg=theme["MENU_BG"], fg=theme["MENU_FG"])
@@ -291,13 +298,83 @@ def update_expand_frame_height(event=None):
             line_numbers.pack_configure(padx=(0,0))  # Normal when expanded
 root.bind("<Configure>", update_expand_frame_height)
 
+# --- SEARCH BAR ADDED HERE ---
+search_var = tk.StringVar()
+
+# Create a frame to center the search bar and button
+searchbar_frame = tk.Frame(
+    explorer_frame,
+    bg=current_theme["TREE_BG"],
+    highlightbackground=current_theme["TREE_SEL_BG"],
+    highlightthickness=0,
+    bd=0
+)
+searchbar_frame.pack(side="top", fill="x", padx=32, pady=(18, 10))
+
+search_entry = tk.Entry(
+    searchbar_frame, textvariable=search_var,
+    bg=current_theme["TREE_BG"], fg=current_theme["TREE_FG"],
+    insertbackground=current_theme["CURSOR_COLOR"],
+    highlightbackground=current_theme["TREE_SEL_BG"],
+    highlightcolor=current_theme["TREE_SEL_BG"],
+    relief="solid",
+    font=("Consolas", 12),
+    justify="center",
+    bd=2,
+    highlightthickness=1
+)
+search_entry.pack(side="top", fill="x", padx=6, pady=(0, 10), ipady=5)
+search_entry.bind("<KeyRelease>", lambda e: search_tree())
+
 open_btn = tk.Button(
-    explorer_frame, text="Open Folder", command=lambda: open_folder_dialog(),
+    searchbar_frame, text="Open Folder", command=lambda: open_folder_dialog(),
     relief="flat", font=("Consolas", 11, "bold"),
     bg=current_theme["TREE_BG"], fg=current_theme["TREE_FG"],
-    activebackground=current_theme["TREE_SEL_BG"], bd=0, highlightthickness=0, padx=8, pady=4
+    activebackground=current_theme["TREE_SEL_BG"], bd=0, highlightthickness=1,
+    highlightbackground=current_theme["TREE_SEL_BG"],
+    padx=8, pady=6,
+    cursor="hand2"
 )
-open_btn.pack(side="top", anchor="w", padx=(32,7), pady=(8,6))
+open_btn.pack(side="top", fill="x", padx=6, pady=(0, 2))
+
+def search_tree():
+    query = search_var.get().strip().lower()
+    filetree.delete(*filetree.get_children())
+    if not opened_folder[0] or not os.path.exists(opened_folder[0]):
+        return
+
+    def insert_item_filtered(parent, abspath, force_open=False):
+        name = os.path.basename(abspath)
+        # Exclude .uid files
+        if name.lower().endswith('.uid'):
+            return
+        match_query = query in name.lower()
+        if os.path.isdir(abspath):
+            children = []
+            for child in sorted(os.listdir(abspath), key=lambda x: (not os.path.isdir(os.path.join(abspath, x)), x.lower())):
+                children.append(os.path.join(abspath, child))
+            matching_children = [c for c in children if match_query or query in os.path.basename(c).lower() or (os.path.isdir(c) and folder_contains_match(c, query))]
+            if match_query or matching_children:
+                # Open folder if searching and there is a match
+                oid = filetree.insert(parent, "end", text=name, open=True, values=[abspath])
+                for child in children:
+                    if match_query or query in os.path.basename(child).lower() or (os.path.isdir(child) and folder_contains_match(child, query)):
+                        insert_item_filtered(oid, child, force_open=True)
+        else:
+            if match_query:
+                filetree.insert(parent, "end", text=name, values=[abspath])
+
+    def folder_contains_match(folder, query):
+        for root_, dirs, files in os.walk(folder):
+            for f in files:
+                # Exclude .uid files
+                if f.lower().endswith('.uid'):
+                    continue
+                if query in f.lower():
+                    return True
+        return False
+
+    insert_item_filtered("", opened_folder[0], force_open=True)
 
 tree_scroll = ttk.Scrollbar(explorer_frame, orient="vertical")
 filetree = ttk.Treeview(
@@ -593,7 +670,7 @@ def on_shift_tab(event):
         else:
             actual_end_line = end_line
             keep_end_line = end_line
-            
+        
         # Store original selection info
         had_full_line_selection = sel_start.endswith('.0') and (selection_ends_at_line_start or text.get(f"{actual_end_line}.0", sel_end).strip() == "")
         
@@ -619,7 +696,7 @@ def on_shift_tab(event):
             if selection_ends_at_line_start:
                 new_sel_end = f"{keep_end_line}.0"
             else:
-                new_end_col = max(0, end_col + (line_indents[actual_end_line] - (len(text.get(f"{actual_end_line}.0", sel_end)) - len(text.get(f"{actual_end_line}.0", sel_end).lstrip()))))
+                new_end_col = max(0, end_col + (line_indents[actual_end_line] - (len(text.get(f"{actual_end_line}.0", sel_end)) - len(text.get(f"{actual_endLine}.0", sel_end).lstrip()))))
                 new_sel_end = f"{actual_end_line}.{new_end_col}"
             new_sel_start = f"{start_line}.{new_start_col}"
             
@@ -703,6 +780,9 @@ def load_tree(path):
     filetree.delete(*filetree.get_children())
     def insert_item(parent, abspath):
         name = os.path.basename(abspath)
+        # Exclude .uid files
+        if name.lower().endswith('.uid'):
+            return
         if os.path.isdir(abspath):
             oid = filetree.insert(parent, "end", text=name, open=False, values=[abspath])
             try:
