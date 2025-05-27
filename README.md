@@ -27,28 +27,25 @@ A simple, lightweight text editor for Windows, built for myself but free for any
 <p align="center">
   <img src="https://github.com/user-attachments/assets/72e68ef5-827a-4dd2-a9a9-2d0fbf0983a2" 
        alt="site_index.html" 
-       width="320" 
+       width="640" 
        style="border-radius: 12px; border: 2px solid #b4befe; margin: 12px; box-shadow: 0 4px 16px #0003;">
   <br>
-  <b>site_index.html</b>
 </p>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/7177be87-74bf-4929-99a2-d4cc30793791" 
        alt="Gladiator_Scripts_enemy.gd" 
-       width="320" 
+       width="640" 
        style="border-radius: 12px; border: 2px solid #b4befe; margin: 12px; box-shadow: 0 4px 16px #0003;">
   <br>
-  <b>Gladiator_Scripts_enemy.gd</b>
 </p>
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/3350c05a-bdb8-4467-a3c5-f8823af41e58" 
        alt="org_solis-site_index.html" 
-       width="320" 
+       width="640" 
        style="border-radius: 12px; border: 2px solid #b4befe; margin: 12px; box-shadow: 0 4px 16px #0003;">
   <br>
-  <b>org_solis-site_index.html</b>
 </p>
 
 ---
