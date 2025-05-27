@@ -22,7 +22,7 @@ A simple, lightweight text editor for Windows, built for myself but free for any
 
 ---
 
-## Screenshot
+## Screenshots
 
 <p align="center">
   <img src="https://github.com/user-attachments/assets/72e68ef5-827a-4dd2-a9a9-2d0fbf0983a2" 
