@@ -3,3 +3,5 @@ icon.ico
 build
 dist
 text_editor.spec
+settings.json
+.qodo

@@ -1,3 +1,4 @@
+from tkinterdnd2 import DND_FILES, TkinterDnD
 import tkinter as tk
 from tkinter import filedialog, messagebox, font
 from tkinter import ttk
@@ -9,9 +10,7 @@ from pygments import lex
 from pygments.lexers import get_lexer_by_name
 from pygments.token import Token
 
-# --------- For PyInstaller-compat themes directory ---------
 def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
     try:
         base_path = sys._MEIPASS
     except AttributeError:
@@ -19,9 +18,7 @@ def resource_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 THEME_DIR = resource_path("themes")
-SETTINGS_FILE = "settings.json"  # Keep settings file alongside exe/script
-
-# --------- End PyInstaller compatibility section -----------
+SETTINGS_FILE = "settings.json"
 
 def ensure_theme_dir():
     if not os.path.exists(THEME_DIR):
@@ -61,7 +58,7 @@ if not os.path.exists(icon_path):
     except Exception as e:
         print("Could not download icon:", e)
 
-root = tk.Tk()
+root = TkinterDnD.Tk()
 root.title("Untitled - Code Editor")
 root.geometry("1100x770")
 root.minsize(740, 500)
@@ -72,7 +69,6 @@ try:
 except Exception as e:
     print("Couldn't load icon:", e)
 
-# --- Load themes and settings ---
 themes = load_themes()
 settings = load_settings()
 current_theme_name = settings["theme"] if settings["theme"] in themes else list(themes.keys())[0]
@@ -180,21 +176,25 @@ def apply_theme(theme_name):
     theme_menus_and_scrollbars(theme)
     root.configure(bg=theme["BG_COLOR"])
     main_frame.config(bg=theme["BG_COLOR"])
-    text.config(
-        bg=theme["BG_COLOR"],
-        fg=theme["FG_COLOR"],
-        insertbackground=theme["CURSOR_COLOR"],
-        selectbackground=theme["SELECT_BG"],
-        selectforeground=theme["FG_COLOR"],
-        xscrollcommand=hscroll.set,
-        yscrollcommand=lambda *args: (line_numbers.yview_moveto(text.yview()[0]), vscroll.set(*args))
-    )
-    line_numbers.config(
-        bg=theme["LN_BG"],
-        fg=theme["LN_FG"],
-        font=line_number_font
-    )
+    if 'line_numbers' in globals() and 'text' in globals():
+        line_numbers.config(
+            bg=theme["LN_BG"],
+            fg=theme["LN_FG"],
+            font=line_number_font
+        )
+        text.config(
+            bg=theme["BG_COLOR"],
+            fg=theme["FG_COLOR"],
+            insertbackground=theme["CURSOR_COLOR"],
+            selectbackground=theme["SELECT_BG"],
+            selectforeground=theme["FG_COLOR"],
+            xscrollcommand=hscroll.set,
+            yscrollcommand=lambda *args: (line_numbers.yview_moveto(text.yview()[0]), vscroll.set(*args))
+        )
     explorer_frame.config(bg=theme["TREE_BG"])
+    collapse_btn.config(bg=theme["TREE_BG"], fg=theme["TREE_FG"], activebackground=theme["TREE_SEL_BG"])
+    expand_frame.config(bg=theme["TREE_BG"])
+    expand_btn.config(bg=theme["TREE_BG"], fg=theme["TREE_FG"], activebackground=theme["TREE_SEL_BG"])
     open_btn.config(bg=theme["TREE_BG"], fg=theme["TREE_FG"], activebackground=theme["TREE_SEL_BG"], bd=0, relief="flat")
     filetree.config(style="Custom.Treeview")
     menubar.config(bg=theme["MENU_BG"], fg=theme["MENU_FG"])
@@ -216,6 +216,13 @@ def apply_theme(theme_name):
     text.tag_configure("gdscript.string", foreground=theme["gdscript.string"])
     text.tag_configure("gdscript.number", foreground=theme["gdscript.number"])
     text.tag_configure("gdscript.comment", foreground=theme["gdscript.comment"])
+    text.tag_configure("gdscript.operator", foreground=theme.get("gdscript.operator", "#f38ba8"))
+    text.tag_configure("gdscript.annotation", foreground=theme.get("gdscript.annotation", "#f9e2af"))
+    text.tag_configure("gdscript.type", foreground=theme.get("gdscript.type", "#cba6f7"))
+    text.tag_configure("gdscript.signal", foreground=theme.get("gdscript.signal", "#a6e3a1"))
+    text.tag_configure("gdscript.decorator", foreground=theme.get("gdscript.decorator", "#f9e2af"))
+    text.tag_configure("gdscript.variable", foreground=theme.get("gdscript.variable", "#94e2d5"))
+    text.tag_configure("gdscript.builtin_class", foreground=theme.get("gdscript.builtin_class", "#b4befe"))
     highlight_all()
     save_settings(current_theme_name, font_size)
 
@@ -242,10 +249,42 @@ def zoom_in(event=None): set_font_size(font_size + 1)
 def zoom_out(event=None): set_font_size(font_size - 1)
 def zoom_reset(event=None): set_font_size(13)
 
+sidebar_collapsed = [False]
+
 paned = tk.PanedWindow(root, orient="horizontal", sashwidth=6, sashrelief="flat", bg=current_theme["BG_COLOR"])
 paned.pack(fill="both", expand=True)
 
-explorer_frame = tk.Frame(paned, bg=current_theme["TREE_BG"], borderwidth=0, highlightthickness=0, padx=8, pady=8)
+explorer_frame = tk.Frame(paned, bg=current_theme["TREE_BG"], borderwidth=0, highlightthickness=0, padx=0, pady=0)
+
+collapse_btn = tk.Button(
+    explorer_frame, text="◀", command=lambda: collapse_sidebar(),
+    relief="flat", font=("Consolas", 16, "bold"), bd=0, highlightthickness=0,
+    bg=current_theme["TREE_BG"], fg=current_theme["TREE_FG"],
+    activebackground=current_theme["TREE_SEL_BG"], padx=0, pady=0
+)
+collapse_btn.pack(side="left", fill="y")
+
+expand_frame = tk.Frame(root, bg=current_theme["TREE_BG"], width=24)
+expand_btn = tk.Button(
+    expand_frame, text="▶", command=lambda: expand_sidebar(),
+    relief="flat", font=("Consolas", 16, "bold"), bd=0, highlightthickness=0,
+    bg=current_theme["TREE_BG"], fg=current_theme["TREE_FG"],
+    activebackground=current_theme["TREE_SEL_BG"], padx=0, pady=0
+)
+expand_btn.pack(fill="both", expand=True)
+expand_frame.place_forget()
+
+def update_expand_frame_height(event=None):
+    if sidebar_collapsed[0]:
+        h = root.winfo_height()
+        expand_frame.place(x=0, y=0, width=32, height=h)
+        if 'line_numbers' in globals():
+            line_numbers.pack_configure(padx=(32,0))  # Move right when collapsed
+    else:
+        expand_frame.place_forget()
+        if 'line_numbers' in globals():
+            line_numbers.pack_configure(padx=(0,0))  # Normal when expanded
+root.bind("<Configure>", update_expand_frame_height)
 
 open_btn = tk.Button(
     explorer_frame, text="Open Folder", command=lambda: open_folder_dialog(),
@@ -253,7 +292,7 @@ open_btn = tk.Button(
     bg=current_theme["TREE_BG"], fg=current_theme["TREE_FG"],
     activebackground=current_theme["TREE_SEL_BG"], bd=0, highlightthickness=0, padx=8, pady=4
 )
-open_btn.pack(side="top", anchor="w", padx=7, pady=(6,6))
+open_btn.pack(side="top", anchor="w", padx=(32,7), pady=(8,6))
 
 tree_scroll = ttk.Scrollbar(explorer_frame, orient="vertical")
 filetree = ttk.Treeview(
@@ -266,8 +305,187 @@ filetree.pack(side="left", fill="both", expand=True, padx=(2,0), pady=(0,0))
 tree_scroll.lift(filetree)
 
 main_frame = tk.Frame(paned, bg=current_theme["BG_COLOR"], borderwidth=0, highlightthickness=0)
-paned.add(explorer_frame, minsize=120)
-paned.add(main_frame)
+
+def setup_main_frame_contents():
+    for child in main_frame.winfo_children():
+        child.destroy()
+    global line_numbers, text, text_frame, vscroll, hscroll
+
+    text_frame = tk.Frame(main_frame, bg=current_theme["BG_COLOR"], borderwidth=0, highlightthickness=0)
+    text_frame.pack(fill="both", expand=1)
+
+    line_numbers = tk.Text(
+        text_frame, borderwidth=0, highlightthickness=0, relief='flat',
+        width=5, padx=4, takefocus=0,
+        background=current_theme["LN_BG"],
+        foreground=current_theme["LN_FG"],
+        font=line_number_font, state="disabled", wrap="none"
+    )
+    # Don't set padx here; handled in update_expand_frame_height
+    line_numbers.pack(side="left", fill="y")
+
+    text = tk.Text(
+        text_frame, borderwidth=0, highlightthickness=0, relief='flat', insertwidth=2,
+        undo=True, wrap="none", font=code_font
+    )
+    text.pack(side="left", fill="both", expand=1, padx=0, pady=0)
+
+    vscroll = ttk.Scrollbar(text_frame, orient="vertical", command=text.yview, style='Vertical.TScrollbar')
+    vscroll.pack(side="right", fill="y")
+    hscroll = ttk.Scrollbar(root, orient="horizontal", command=text.xview, style='Horizontal.TScrollbar')
+    hscroll.pack(side="bottom", fill="x")
+    text.config(yscrollcommand=lambda *args: (line_numbers.yview_moveto(text.yview()[0]), vscroll.set(*args)),
+                xscrollcommand=hscroll.set)
+
+    for widget in (root, text, line_numbers, vscroll, hscroll):
+        widget.bind("<FocusIn>", always_focus_code)
+    for seq in ("<ButtonRelease-1>", "<Button-1>", "<KeyRelease>", "<Key>", "<Configure>"):
+        text.bind(seq, always_focus_code)
+
+    for seq in ("<Button-1>", "<B1-Motion>", "<MouseWheel>", "<Key>", "<Button-4>", "<Button-5>", "<Shift-MouseWheel>"):
+        line_numbers.bind(seq, ignore_event)
+
+    text.bind("<KeyRelease>", lambda e: (highlight_all(), update_line_numbers()))
+    text.bind("<MouseWheel>", lambda e: update_line_numbers())
+    text.bind("<Button-1>", lambda e: (highlight_all(), update_line_numbers()))
+    text.bind("<Configure>", lambda e: update_line_numbers())
+    text.bind("<Tab>", on_tab)
+    text.bind("<Shift-Tab>", on_shift_tab)
+    text.bind("<Return>", auto_indent)
+    text.bind(">", html_auto_close_tag)
+    text.bind("<Control-MouseWheel>", zoom)
+    text.bind("<Control-Button-4>", zoom)
+    text.bind("<Control-Button-5>", zoom)
+    text.bind("<Control-Shift-MouseWheel>", zoom)
+    text.bind("<Control-plus>", zoom_in)
+    text.bind("<Control-minus>", zoom_out)
+    text.bind("<Control-0>", zoom_reset)
+    update_line_numbers()
+
+def collapse_sidebar():
+    if not sidebar_collapsed[0]:
+        paned.forget(explorer_frame)
+        sidebar_collapsed[0] = True
+        update_expand_frame_height()
+        if main_frame not in paned.panes():
+            paned.add(main_frame)
+
+def expand_sidebar():
+    if sidebar_collapsed[0]:
+        if explorer_frame not in paned.panes():
+            for pane in paned.panes():
+                paned.forget(pane)
+            paned.add(explorer_frame, minsize=120)
+            paned.add(main_frame)
+        sidebar_collapsed[0] = False
+        update_expand_frame_height()
+
+def always_focus_code(event=None):
+    text.focus_set()
+def ignore_event(event):
+    text.focus_set()
+    return "break"
+
+def update_line_numbers(event=None):
+    code = text.get("1.0", tk.END)
+    lines = code.count('\n')
+    numbers = "\n".join(str(i+1) for i in range(lines))
+    line_numbers.config(state="normal")
+    line_numbers.delete("1.0", tk.END)
+    line_numbers.insert("1.0", numbers)
+    line_numbers.config(state="disabled")
+    line_numbers.yview_moveto(text.yview()[0])
+
+def on_tab(event):
+    try:
+        sel_start = text.index("sel.first")
+        sel_end = text.index("sel.last")
+        start_line = int(sel_start.split('.')[0])
+        end_line = int(sel_end.split('.')[0])
+        if text.compare(f"{end_line}.0", "==", sel_end):
+            end_line -= 1
+        for line in range(start_line, end_line + 1):
+            line_start = f"{line}.0"
+            text.insert(line_start, "    ")
+        text.focus_set()
+        return "break"
+    except tk.TclError:
+        text.insert(tk.INSERT, "    ")
+        text.focus_set()
+        return "break"
+
+def on_shift_tab(event):
+    try:
+        sel_start = text.index("sel.first")
+        sel_end = text.index("sel.last")
+        start_line = int(sel_start.split('.')[0])
+        end_line = int(sel_end.split('.')[0])
+        if text.compare(f"{end_line}.0", "==", sel_end):
+            end_line -= 1
+        for line in range(start_line, end_line + 1):
+            line_start = f"{line}.0"
+            line_end = f"{line}.end"
+            line_text = text.get(line_start, line_end)
+            if line_text.startswith("    "):
+                text.delete(line_start, f"{line_start}+4c")
+            elif line_text.startswith("\t"):
+                text.delete(line_start, f"{line_start}+1c")
+        text.focus_set()
+        return "break"
+    except tk.TclError:
+        text.focus_set()
+        return "break"
+
+def is_auto_indent_language():
+    return current_language in ("python", "gdscript", "javascript")
+
+def auto_indent(event):
+    cursor_index = text.index(tk.INSERT)
+    current_line = int(cursor_index.split('.')[0])
+    prev_line_idx = f"{current_line - 1}.0"
+    prev_line = text.get(prev_line_idx, f"{prev_line_idx} lineend")
+    indent = ""
+    for c in prev_line:
+        if c in (" ", "\t"):
+            indent += c
+        else:
+            break
+    extra_indent = ""
+    if is_auto_indent_language():
+        if prev_line.rstrip().endswith(":"):
+            extra_indent = "    "
+    text.insert(tk.INSERT, "\n" + indent + extra_indent)
+    text.focus_set()
+    return "break"
+
+def html_auto_close_tag(event):
+    if current_language != "html":
+        return
+    cursor = text.index(tk.INSERT)
+    prev = text.get(f"{cursor} -2c", cursor)
+    if prev.endswith("<"):
+        return
+    match = re.match(r"<([a-zA-Z][\w\-]*)>$", text.get(f"{cursor} linestart", cursor))
+    if match:
+        tag = match.group(1)
+        text.insert(cursor, f"</{tag}>")
+        text.mark_set(tk.INSERT, cursor)
+    else:
+        last_tag = None
+        line = text.get(f"{cursor} linestart", cursor)
+        tag_match = re.findall(r"<([a-zA-Z][\w\-]*)[^>]*?>", line)
+        if tag_match:
+            last_tag = tag_match[-1]
+        if prev == "</" and last_tag:
+            text.insert(cursor, f"{last_tag}>")
+            text.mark_set(tk.INSERT, cursor)
+    return
+
+def save_shortcut(event=None):
+    save_file()
+    return "break"
+root.bind_all("<Control-s>", save_shortcut)
+root.bind_all("<Command-s>", save_shortcut)
 
 def open_folder_dialog():
     folder = filedialog.askdirectory()
@@ -314,164 +532,6 @@ def open_tree_file(event):
 filetree.bind("<Double-1>", open_tree_file)
 filetree.bind("<Return>", open_tree_file)
 
-line_numbers = tk.Text(
-    main_frame, borderwidth=0, highlightthickness=0, relief='flat',
-    width=5, padx=4, takefocus=0,
-    background=current_theme["LN_BG"],
-    foreground=current_theme["LN_FG"],
-    font=line_number_font, state="disabled", wrap="none"
-)
-line_numbers.pack(side="left", fill="y")
-
-text_frame = tk.Frame(main_frame, bg=current_theme["BG_COLOR"], borderwidth=0, highlightthickness=0)
-text_frame.pack(side="right", fill="both", expand=1)
-text = tk.Text(
-    text_frame, borderwidth=0, highlightthickness=0, relief='flat', insertwidth=2,
-    undo=True, wrap="none", font=code_font
-)
-text.pack(side="left", fill="both", expand=1, padx=0, pady=0)
-
-vscroll = ttk.Scrollbar(text_frame, orient="vertical", command=text.yview, style='Vertical.TScrollbar')
-vscroll.pack(side="right", fill="y")
-hscroll = ttk.Scrollbar(root, orient="horizontal", command=text.xview, style='Horizontal.TScrollbar')
-hscroll.pack(side="bottom", fill="x")
-text.config(yscrollcommand=lambda *args: (line_numbers.yview_moveto(text.yview()[0]), vscroll.set(*args)),
-            xscrollcommand=hscroll.set)
-
-def always_focus_code(event=None):
-    text.focus_set()
-for widget in (root, text, line_numbers, vscroll, hscroll):
-    widget.bind("<FocusIn>", always_focus_code)
-for seq in ("<ButtonRelease-1>", "<Button-1>", "<KeyRelease>", "<Key>", "<Configure>"):
-    text.bind(seq, always_focus_code)
-
-def ignore_event(event):
-    text.focus_set()
-    return "break"
-for seq in ("<Button-1>", "<B1-Motion>", "<MouseWheel>", "<Key>", "<Button-4>", "<Button-5>", "<Shift-MouseWheel>"):
-    line_numbers.bind(seq, ignore_event)
-
-def update_line_numbers(event=None):
-    code = text.get("1.0", tk.END)
-    lines = code.count('\n')
-    numbers = "\n".join(str(i+1) for i in range(lines))
-    line_numbers.config(state="normal")
-    line_numbers.delete("1.0", tk.END)
-    line_numbers.insert("1.0", numbers)
-    line_numbers.config(state="disabled")
-    line_numbers.yview_moveto(text.yview()[0])
-
-text.bind("<KeyRelease>", lambda e: (highlight_all(), update_line_numbers()))
-text.bind("<MouseWheel>", lambda e: update_line_numbers())
-text.bind("<Button-1>", lambda e: (highlight_all(), update_line_numbers()))
-text.bind("<Configure>", lambda e: update_line_numbers())
-
-def on_tab(event):
-    try:
-        sel_start = text.index("sel.first")
-        sel_end = text.index("sel.last")
-        start_line = int(sel_start.split('.')[0])
-        end_line = int(sel_end.split('.')[0])
-        if text.compare(f"{end_line}.0", "==", sel_end):
-            end_line -= 1
-        for line in range(start_line, end_line + 1):
-            line_start = f"{line}.0"
-            text.insert(line_start, "    ")
-        text.focus_set()
-        return "break"
-    except tk.TclError:
-        text.insert(tk.INSERT, "    ")
-        text.focus_set()
-        return "break"
-
-def on_shift_tab(event):
-    try:
-        sel_start = text.index("sel.first")
-        sel_end = text.index("sel.last")
-        start_line = int(sel_start.split('.')[0])
-        end_line = int(sel_end.split('.')[0])
-        if text.compare(f"{end_line}.0", "==", sel_end):
-            end_line -= 1
-        for line in range(start_line, end_line + 1):
-            line_start = f"{line}.0"
-            line_end = f"{line}.end"
-            line_text = text.get(line_start, line_end)
-            if line_text.startswith("    "):
-                text.delete(line_start, f"{line_start}+4c")
-            elif line_text.startswith("\t"):
-                text.delete(line_start, f"{line_start}+1c")
-        text.focus_set()
-        return "break"
-    except tk.TclError:
-        text.focus_set()
-        return "break"
-
-text.bind("<Tab>", on_tab)
-text.bind("<Shift-Tab>", on_shift_tab)
-
-def is_auto_indent_language():
-    return current_language in ("python", "gdscript", "javascript")
-
-def auto_indent(event):
-    cursor_index = text.index(tk.INSERT)
-    current_line = int(cursor_index.split('.')[0])
-    prev_line_idx = f"{current_line - 1}.0"
-    prev_line = text.get(prev_line_idx, f"{prev_line_idx} lineend")
-    indent = ""
-    for c in prev_line:
-        if c in (" ", "\t"):
-            indent += c
-        else:
-            break
-    extra_indent = ""
-    if is_auto_indent_language():
-        if prev_line.rstrip().endswith(":"):
-            extra_indent = "    "
-    text.insert(tk.INSERT, "\n" + indent + extra_indent)
-    text.focus_set()
-    return "break"
-
-text.bind("<Return>", auto_indent)
-
-def html_auto_close_tag(event):
-    if current_language != "html":
-        return
-    cursor = text.index(tk.INSERT)
-    prev = text.get(f"{cursor} -2c", cursor)
-    if prev.endswith("<"):
-        return
-    match = re.match(r"<([a-zA-Z][\w\-]*)>$", text.get(f"{cursor} linestart", cursor))
-    if match:
-        tag = match.group(1)
-        text.insert(cursor, f"</{tag}>")
-        text.mark_set(tk.INSERT, cursor)
-    else:
-        last_tag = None
-        line = text.get(f"{cursor} linestart", cursor)
-        tag_match = re.findall(r"<([a-zA-Z][\w\-]*)[^>]*?>", line)
-        if tag_match:
-            last_tag = tag_match[-1]
-        if prev == "</" and last_tag:
-            text.insert(cursor, f"{last_tag}>")
-            text.mark_set(tk.INSERT, cursor)
-    return
-
-text.bind(">", html_auto_close_tag)
-
-text.bind("<Control-MouseWheel>", zoom)
-text.bind("<Control-Button-4>", zoom)
-text.bind("<Control-Button-5>", zoom)
-text.bind("<Control-Shift-MouseWheel>", zoom)
-text.bind("<Control-plus>", zoom_in)
-text.bind("<Control-minus>", zoom_out)
-text.bind("<Control-0>", zoom_reset)
-
-def save_shortcut(event=None):
-    save_file()
-    return "break"
-root.bind_all("<Control-s>", save_shortcut)
-root.bind_all("<Command-s>", save_shortcut)
-
 menubar = tk.Menu(root, bg=current_theme["MENU_BG"], fg=current_theme["MENU_FG"])
 filemenu = tk.Menu(menubar, tearoff=0, bg=current_theme["MENU_BG"], fg=current_theme["MENU_FG"])
 thememenu = tk.Menu(menubar, tearoff=0, bg=current_theme["MENU_BG"], fg=current_theme["MENU_FG"])
@@ -491,7 +551,6 @@ def select_theme(theme_name):
 for theme_name in themes:
     thememenu.add_command(label=theme_name, command=lambda t=theme_name: select_theme(t))
 
-# Theme import support
 def import_theme_dialog():
     path = filedialog.askopenfilename(
         title="Import Theme",
@@ -502,7 +561,6 @@ def import_theme_dialog():
     try:
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
-        # Save imported theme into THEME_DIR (which works both as exe or script)
         out_path = os.path.join(THEME_DIR, os.path.basename(path))
         with open(out_path, "w", encoding="utf-8") as outf:
             json.dump(data, outf, indent=2)
@@ -528,10 +586,11 @@ def new_file():
     highlight_all()
     update_line_numbers()
 
-def open_file():
-    filepath = filedialog.askopenfilename(
-        filetypes=[("All Files", "*.*")]
-    )
+def open_file(filepath=None):
+    if filepath is None:
+        filepath = filedialog.askopenfilename(
+            filetypes=[("All Files", "*.*")]
+        )
     if not filepath:
         return
     ext = os.path.splitext(filepath)[-1]
@@ -540,12 +599,15 @@ def open_file():
             set_language(lexname)
             break
     text.delete(1.0, tk.END)
-    with open(filepath, "r", encoding="utf-8") as file:
-        text.insert(tk.END, file.read())
-    root.title(f"{filepath} - Code Editor")
-    current_filepath[0] = filepath
-    highlight_all()
-    update_line_numbers()
+    try:
+        with open(filepath, "r", encoding="utf-8") as file:
+            text.insert(tk.END, file.read())
+        root.title(f"{filepath} - Code Editor")
+        current_filepath[0] = filepath
+        highlight_all()
+        update_line_numbers()
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to open file:\n{e}")
 
 def save_file():
     if current_filepath[0]:
@@ -579,49 +641,66 @@ def highlight_all(event=None):
 
     theme = current_theme
     if current_language == "gdscript":
+        # Comments
         for match in re.finditer(r'#.*', code):
-            start = "1.0 + {}c".format(match.start())
-            end = "1.0 + {}c".format(match.end())
-            text.tag_add("gdscript.comment", start, end)
+            text.tag_add("gdscript.comment", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Strings (single, double, triple)
         for match in re.finditer(r"('''.*?'''|\"\"\".*?\"\"\"|'(?:[^'\\]|\\.)*'|\"(?:[^\"\\]|\\.)*\")", code, re.DOTALL):
-            start = "1.0 + {}c".format(match.start())
-            end = "1.0 + {}c".format(match.end())
-            text.tag_add("gdscript.string", start, end)
-        for match in re.finditer(r"\b\d+(\.\d+)?\b", code):
-            start = "1.0 + {}c".format(match.start())
-            end = "1.0 + {}c".format(match.end())
-            text.tag_add("gdscript.number", start, end)
+            text.tag_add("gdscript.string", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Numbers (int, float, binary, hex)
+        for match in re.finditer(r'\b(?:0x[0-9A-Fa-f]+|0b[01]+|\d+(\.\d+)?([eE][+-]?\d+)?|\.\d+)\b', code):
+            text.tag_add("gdscript.number", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Annotations / Decorators (@export, @onready, etc.)
+        for match in re.finditer(r'@[a-zA-Z_]\w*', code):
+            text.tag_add("gdscript.annotation", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Signals
+        for match in re.finditer(r'^\s*signal\s+(\w+)', code, re.MULTILINE):
+            text.tag_add("gdscript.signal", f"1.0+{match.start(1)}c", f"1.0+{match.end(1)}c")
+        # Types (e.g. : int, : String, -> void)
+        for match in re.finditer(r':\s*([A-Za-z_]\w*)', code):
+            text.tag_add("gdscript.type", f"1.0+{match.start(1)}c", f"1.0+{match.end(1)}c")
+        for match in re.finditer(r'->\s*([A-Za-z_]\w*)', code):
+            text.tag_add("gdscript.type", f"1.0+{match.start(1)}c", f"1.0+{match.end(1)}c")
+        # Builtin classes (Vector2, Node, etc.)
+        BUILTIN_CLASSES = [
+            "Vector2", "Vector3", "Node", "Node2D", "Sprite2D", "Sprite3D", "Color", "Dictionary", "Array",
+            "SceneTree", "Resource", "Input", "String", "PoolStringArray", "Rect2", "Transform2D"
+        ]
+        for cls in BUILTIN_CLASSES:
+            for match in re.finditer(rf'\b{cls}\b', code):
+                text.tag_add("gdscript.builtin_class", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Builtin functions
         builtins = [
             "abs", "print", "str", "int", "float", "get_node", "queue_free", "get_tree", "yield", "await", "extends",
             "setget", "assert", "pass", "break", "continue", "is_instance_valid", "preload", "load", "range", "len"
         ]
-        builtins_re = r"\b(" + "|".join(map(re.escape, builtins)) + r")\b"
-        for match in re.finditer(builtins_re, code):
-            start = "1.0 + {}c".format(match.start())
-            end = "1.0 + {}c".format(match.end())
-            text.tag_add("gdscript.builtin", start, end)
+        for builtin in builtins:
+            for match in re.finditer(rf'\b{builtin}\b', code):
+                text.tag_add("gdscript.builtin", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Keywords
         keywords = [
             "func", "var", "const", "enum", "class", "static", "extends", "onready", "export", "signal",
             "if", "elif", "else", "for", "while", "match", "in", "not", "and", "or", "return", "pass", "break", "continue",
             "true", "false", "null", "self", "tool", "remote", "master", "puppet", "remotesync", "mastersync", "puppetsync", "await"
         ]
-        kw_re = r"\b(" + "|".join(keywords) + r")\b"
-        for match in re.finditer(kw_re, code):
-            start = "1.0 + {}c".format(match.start())
-            end = "1.0 + {}c".format(match.end())
-            text.tag_add("gdscript.keyword", start, end)
-        for match in re.finditer(r"\bfunc\s+(\w+)", code):
-            start = "1.0 + {}c".format(match.start(1))
-            end = "1.0 + {}c".format(match.end(1))
-            text.tag_add("gdscript.function", start, end)
-        for match in re.finditer(r"\bclass\s+(\w+)", code):
-            start = "1.0 + {}c".format(match.start(1))
-            end = "1.0 + {}c".format(match.end(1))
-            text.tag_add("gdscript.class", start, end)
-        for match in re.finditer(r"\b[A-Z_]{2,}\b", code):
-            start = "1.0 + {}c".format(match.start())
-            end = "1.0 + {}c".format(match.end())
-            text.tag_add("gdscript.constant", start, end)
+        for kw in keywords:
+            for match in re.finditer(rf'\b{kw}\b', code):
+                text.tag_add("gdscript.keyword", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Operators (common)
+        for match in re.finditer(r'[\+\-\*/%=&|!<>~^]', code):
+            text.tag_add("gdscript.operator", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        # Variables (simple: variable names before =, after var/const)
+        for match in re.finditer(r'\b(var|const)\s+([A-Za-z_]\w*)', code):
+            text.tag_add("gdscript.variable", f"1.0+{match.start(2)}c", f"1.0+{match.end(2)}c")
+        # Function names
+        for match in re.finditer(r'\bfunc\s+([A-Za-z_]\w*)', code):
+            text.tag_add("gdscript.function", f"1.0+{match.start(1)}c", f"1.0+{match.end(1)}c")
+        # Class names
+        for match in re.finditer(r'\bclass\s+([A-Za-z_]\w*)', code):
+            text.tag_add("gdscript.class", f"1.0+{match.start(1)}c", f"1.0+{match.end(1)}c")
+        # Constants (UPPER_SNAKE_CASE)
+        for match in re.finditer(r'\b[A-Z_]{2,}\b', code):
+            text.tag_add("gdscript.constant", f"1.0+{match.start()}c", f"1.0+{match.end()}c")
     elif current_language == "html":
         for match in re.finditer(r"<!--.*?-->", code, re.DOTALL):
             start = "1.0 + {}c".format(match.start())
@@ -687,9 +766,41 @@ def set_language(lexname):
 
 root.protocol("WM_DELETE_WINDOW", on_exit)
 
+def launch_open_with_file():
+    if len(sys.argv) > 1:
+        filepath = sys.argv[1]
+        if os.path.exists(filepath):
+            open_file(filepath)
+            folder = os.path.dirname(filepath)
+            if folder and os.path.isdir(folder):
+                opened_folder[0] = folder
+                load_tree(folder)
+        else:
+            messagebox.showwarning("File not found", f'File "{filepath}" does not exist.')
+
+paned.add(explorer_frame, minsize=120)
+paned.add(main_frame)
+setup_main_frame_contents()
+
 apply_theme(current_theme_name)
 set_language(current_language)
 highlight_all()
 update_line_numbers()
+
+launch_open_with_file()
+
+def on_drop(event):
+    files = root.tk.splitlist(event.data)
+    for filepath in files:
+        if os.path.isdir(filepath):
+            opened_folder[0] = filepath
+            load_tree(filepath)
+            break
+        elif os.path.isfile(filepath):
+            open_file(filepath)
+            break
+
+root.drop_target_register(DND_FILES)
+root.dnd_bind('<<Drop>>', on_drop)
 
 root.mainloop()
