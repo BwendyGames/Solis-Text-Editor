@@ -20,6 +20,8 @@ A simple, lightweight text editor for Windows, built for myself but free for any
 3. **Add new themes** by dropping `.json` files into the `themes` folder.
 4. **Your settings are saved automatically** .
 
+[Use the plugin for Godot!](https://github.com/BwendyGames/Solis-Editor-Godot-Plugin)
+
 ---
 
 ## Screenshots
