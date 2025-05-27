@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/a23cec58-7578-459b-9457-52e15b8d63c7" width="600" alt="Solis Text Editor screenshot">
+  <img src="https://github.com/user-attachments/assets/20fea243-63ea-4f81-a2a0-c7ee0d1ca011" width="600" alt="Solis Text Editor screenshot"> 
 </p>
 
 # Solis Text Editor
